@@ -30,21 +30,46 @@ using namespace cv;
 
 
 int main(int argc, char * argv[]) {
-    if ((argc < 3) || (argc > 3)) { // Test for correct number of arguments
-        cerr << "Usage: " << argv[0] << " <Server> <Server Port>\n";
+    if ((argc < 3)) { // Test for correct number of arguments
+        cerr << "Usage: " << argv[0] << " <Server> <Server Port> <Quality [" << ENCODE_QUALITY << "]> <Width [" << FRAME_WIDTH << "]> <Height [" << FRAME_HEIGHT << "]>\n";
         exit(1);
     }
 
     string servAddress = argv[1]; // First arg: server address
     unsigned short servPort = Socket::resolveService(argv[2], "udp");
 
+    int* quality = new int(ENCODE_QUALITY);
+    if (argc > 3) {
+        string c = argv[3];
+        *quality = stoi(c);
+    }
+
+    int* frame_width = new int(FRAME_WIDTH);
+    if (argc > 4) {
+        string w = argv[4];
+        *frame_width = stoi(w);
+    }
+
+    int* frame_height = new int(FRAME_HEIGHT);
+    if (argc > 4) {
+        string h = argv[5];
+        *frame_height = stoi(h);
+    }
+    cout << "Args:" << endl;
+    cout << "\tQuality: " << *quality << endl;
+    cout << "\tWidth:   " << *frame_width << endl;
+    cout << "\tHeight:  " << *frame_height << endl;
+
+    // setting up ROI
+    Rect roi(196, 39, 277, 413);
+
     try {
         UDPSocket sock;
-        int jpegqual =  ENCODE_QUALITY; // Compression Parameter
+        int jpegqual =  *quality; // Compression Parameter
 
         Mat frame, send;
         vector < uchar > encoded;
-        VideoCapture cap(0); // Grab the camera
+        VideoCapture cap(1); // Grab the camera
         namedWindow("send", CV_WINDOW_AUTOSIZE);
         if (!cap.isOpened()) {
             cerr << "OpenCV Failed to open camera";
@@ -55,7 +80,8 @@ int main(int argc, char * argv[]) {
         while (1) {
             cap >> frame;
             if(frame.size().width==0)continue;//simple integrity check; skip erroneous data...
-            resize(frame, send, Size(FRAME_WIDTH, FRAME_HEIGHT), 0, 0, INTER_LINEAR);
+            resize(frame, send, Size(*frame_width, *frame_height), 0, 0, INTER_LINEAR);
+            send = send(roi);
             vector < int > compression_params;
             compression_params.push_back(CV_IMWRITE_JPEG_QUALITY);
             compression_params.push_back(jpegqual);
